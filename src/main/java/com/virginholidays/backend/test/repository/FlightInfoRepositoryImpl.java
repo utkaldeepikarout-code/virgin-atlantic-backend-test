@@ -35,6 +35,8 @@ public class FlightInfoRepositoryImpl implements FlightInfoRepository {
 
     private final DataSourceConfiguration dataSourceConfiguration;
 
+    private List<Flight> cachedFlights;
+
 
     /**
      * The constructor
@@ -50,6 +52,10 @@ public class FlightInfoRepositoryImpl implements FlightInfoRepository {
     @Override
     public CompletionStage<Optional<List<Flight>>> findAll() {
 
+        if (cachedFlights != null) {
+            return completedFuture(ofNullable(cachedFlights));
+        }
+
         LOGGER.info("Loading flight information");
 
         // load the resource
@@ -64,6 +70,9 @@ public class FlightInfoRepositoryImpl implements FlightInfoRepository {
                     .skip(1L)
                     .map(this::flight)
                     .toList();
+
+            // cache for subsequent calls
+            cachedFlights = flights;
 
             // return the results
             return completedFuture(ofNullable(flights));

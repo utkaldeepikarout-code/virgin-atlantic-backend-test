@@ -54,8 +54,6 @@ public class FlightInfoRepositoryImplTest {
         when(resourceLoader.getClassLoader()).thenReturn(classLoader);
         when(classLoader.getResource(anyString())).thenReturn(resource);
 
-        // Reset the cache so the CSV is read fresh by this test (caching is instance-scoped,
-        // but guard against any future test ordering issues)
         repository = new FlightInfoRepositoryImpl(resourceLoader, dataSourceConfiguration);
 
         // act

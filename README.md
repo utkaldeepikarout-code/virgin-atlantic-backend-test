@@ -1,58 +1,121 @@
-# Virgin Atlantic ~ Flight Information Display
+# Virgin Atlantic - Flight Information Display
 
-Here is an example of a flight times application for Virgin Atlantic. This project represents what we're looking for in 
-a candidate and our current technology choices.
+This repository contains a Spring Boot service that returns flights operating on the day-of-week for a requested date.
 
-Please spend up to 2 hours improving this application. What you improve is up to you: Perhaps it needs more tests,
-additional functionality, or some bug fixing.
+## One-step run
 
-## Rules
+```bash
+mvn spring-boot:run
+```
 
-1) The code must be your own work. If you have a strong case to use a small code snippet of someone else's work, e.g. a
-boilerplate function, it must be clearly commented and attributed to the original author.
-2) The flight data cannot be changed, and must be loaded from the CSV file, so it can easily be replaced with another file.
-3) You must include any unit tests you think are appropriate.
-4) You are not allowed to add any additional dependencies to the project - make use of what's been provided.
-5) Identify intentional gaps in the code by looking for `//FIXME - applicant to complete` and provide either solutions or improvements.
+The app starts with context path `/back-end-test`.
 
-## What it should do
-The application should allow the user to select or input any date, of any year, resulting in the display of flights on
-that day, displayed in chronological order -- a Flight Information Display.
+## API endpoint
 
-## Supplying your code
-Please **create and commit your code into a public Github repository** and supply the link to the recruiter for review.  Your code should compile and run in one step.
+`GET /back-end-test/{date}/results`
 
-## Supporting Data
-The [flight data](./src/main/resources/flights.csv) is a simple comma-separated file containing the following:
+- `date` must be ISO-8601 format: `YYYY-MM-DD`
+- Response is sorted by `departureTime` ascending
 
-| Departure Time | Destination | Destination Airport IATA | Flight No | Sun | Mon | Tue | Wed | Thu | Fri | Sat
-| :--- | :--- | :--- | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: |
-| 09:00 | Antigua | ANU | VS033 |  |  | `x` |  |  |  | 
-| 10:00 | Antigua | ANU | VS033 |  |  |  |  | `x` |  | `x`
-| 11:05 | Barbados | BGI | VS029 | `x` | `x` | `x` | `x` | `x` | `x` | `x`
-| 12:20 | Cancun | CUN | VS093 |  |  | `x` |  |  |  | 
-| 09:00 | Grenada | GND | VS089 |  | `x` |  |  |  |  | 
-| 10:10 | Grenada | GND | VS089 |  |  |  |  |  | `x` | 
-| 10:15 | Havana | HAV | VS063 |  |  | `x` |  |  |  | 
-| 10:15 | Havana | HAV | VS063 |  | `x` |  |  | `x` |  | 
-| 10:15 | Las Vegas | LAS | VS043 | `x` |  |  |  |  | `x` | `x`
-| 10:25 | Las Vegas | LAS | VS043 |  |  |  |  | `x` |  | 
-| 10:35 | Las Vegas | LAS | VS043 |  | `x` | `x` | `x` |  |  | 
-| 15:35 | Las Vegas | LAS | VS044 | `x` | `x` | `x` | `x` | `x` | `x` | `x`
-| 12:25  | Montego Bay | MBJ | VS065 |  |  |  | `x` |  |  | 
-| 12:40 | Montego Bay | MBJ | VS065 | `x` |  |  |  |  |  | 
-| 10:10 | Orlando | MCO | VS049 | `x` |  |  |  |  |  | 
-| 10:15 | Orlando | MCO | VS027 |  |  |  | `x` |  |  | 
-| 11:00 | Orlando | MCO | VS027 |  | `x` |  |  |  |  | 
-| 11:10 | Orlando | MCO | VS049 |  | `x` |  |  |  |  | 
-| 11:20 | Orlando | MCO | VS027 |  |  |  |  |  | `x` | `x`
-| 11:35 | Orlando | MCO | VS027 |  |  |  |  | `x` |  | 
-| 11:45 | Orlando | MCO | VS027 | `x` |  | `x` |  |  |  | 
-| 11:45 | Orlando | MCO | VS049 |  |  |  | `x` |  |  | 
-| 13:00 | Orlando | MCO | VS015 | `x` | `x` | `x` | `x` | `x` | `x` | `x`
-| 09:00 | St Lucia | UVF | VS089 |  | `x` |  |  |  |  | 
-| 09:00 | St Lucia | UVF | VS097 | `x` |  |  |  |  |  | 
-| 10:10 | St Lucia | UVF | VS089 |  |  |  |  |  | `x` | 
-| 09:00 | Tobago | TAB | VS097 | `x` |  |  |  |  |  |
+## Improvements implemented (and why)
 
-The ``x`` denotes days that the flight operates. 
+1. Date parameter is now actually used in request processing.
+    - Why: the original controller ignored `{date}` and always queried `LocalDate.now()`, which breaks expected behavior.
+2. Flight filtering and chronological sorting implemented in `FlightInfoServiceImpl`.
+    - Why: the requirement is a date-driven flight information display ordered by departure time.
+3. Repository-level CSV caching added in `FlightInfoRepositoryImpl`.
+    - Why: avoids parsing the CSV on every call and improves repeat-request latency.
+4. Structured 400 error payload introduced.
+    - Why: clients need stable, machine-readable fields instead of plain string errors.
+5. Test coverage expanded, including Spring MVC HTTP-layer validation.
+    - Why: validates routing, JSON shape, headers, and response status behavior end-to-end at the web layer.
+
+## Note on build file
+
+`pom.xml` has been kept unchanged per the original exercise guidance.
+
+## Example requests and responses
+
+### 200 OK - flights found
+
+Request:
+
+```bash
+curl -i http://localhost:8080/back-end-test/2026-09-08/results
+```
+
+Response:
+
+```http
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+Content-Type: application/json
+
+[
+  {
+	"departureTime": "09:00",
+	"destination": "Antigua",
+	"iata": "ANU",
+	"flightNo": "VS033",
+	"days": ["TUESDAY"]
+  },
+  {
+	"departureTime": "15:00",
+	"destination": "Las Vegas",
+	"iata": "LAS",
+	"flightNo": "VS044",
+	"days": ["TUESDAY"]
+  }
+]
+```
+
+### 204 No Content - no flights for date
+
+This is the expected API behavior when a requested day has no matching flights in the current dataset.
+
+Request:
+
+```bash
+curl -i http://localhost:8080/back-end-test/2030-01-01/results
+```
+
+Response:
+
+```http
+HTTP/1.1 204 No Content
+Cache-Control: no-cache
+```
+
+### 400 Bad Request - invalid date format
+
+Request:
+
+```bash
+curl -i http://localhost:8080/back-end-test/not-a-date/results
+```
+
+Response:
+
+```http
+HTTP/1.1 400 Bad Request
+Cache-Control: no-cache
+Content-Type: application/json
+
+{
+  "code": "INVALID_DATE",
+  "message": "Invalid date format.",
+  "details": "Use ISO-8601 format YYYY-MM-DD."
+}
+```
+
+## Test coverage
+
+- Unit tests for service behavior in `src/test/java/com/virginholidays/backend/test/service/FlightInfoServiceImplTest.java`
+- Unit tests for controller behavior in `src/test/java/com/virginholidays/backend/test/resource/FlightInfoResourceTest.java`
+- Spring MVC integration tests in `src/test/java/com/virginholidays/backend/test/resource/FlightInfoResourceWebMvcTest.java`
+
+Run tests with:
+
+```bash
+mvn test
+```

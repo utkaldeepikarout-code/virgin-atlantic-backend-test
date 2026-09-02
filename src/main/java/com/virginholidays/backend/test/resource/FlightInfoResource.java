@@ -1,6 +1,7 @@
 package com.virginholidays.backend.test.resource;
 
 import com.virginholidays.backend.test.api.Flight;
+import com.virginholidays.backend.test.api.ErrorResponse;
 import com.virginholidays.backend.test.service.FlightInfoService;
 import java.time.LocalDate;
 import java.time.format.DateTimeParseException;
@@ -50,7 +51,13 @@ public class FlightInfoResource {
             outboundDate = LocalDate.parse(date);
         } catch (DateTimeParseException e) {
             return CompletableFuture.completedFuture(
-                    status(HttpStatus.BAD_REQUEST).body("Invalid date format. Please use YYYY-MM-DD.")
+                    status(HttpStatus.BAD_REQUEST)
+                            .cacheControl(noCache())
+                            .body(new ErrorResponse(
+                                    "INVALID_DATE",
+                                    "Invalid date format.",
+                                    "Use ISO-8601 format YYYY-MM-DD."
+                            ))
             );
         }
 
